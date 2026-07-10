@@ -1,0 +1,93 @@
+id,pillar,category,family,habit,level,minutes,cue,identity
+1,health,morning,health:morning,Make your bed,1,1,Right after you stand up,someone who starts the day with order
+2,health,hydration,health:hydration,Drink a glass of water when you wake up,1,1,Keep a glass by your bed,someone who takes care of their body
+3,health,energy,health:energy,Open the curtains for daylight,1,1,First thing after waking,someone who lets light in
+4,health,movement,health:movement,Stand up and stretch for 30 seconds,1,1,After you brush your teeth,someone who moves their body
+5,health,mind-body,health:mind-body,Take 3 slow deep breaths,1,1,Before you get out of bed,someone who starts calm
+6,health,movement,health:movement,Put on your walking shoes,1,1,After breakfast,someone who moves daily
+7,health,hydration,health:hydration,Fill a water bottle for the day,1,2,While the kettle boils,someone who stays hydrated
+8,health,energy,health:energy,Step outside for one minute of fresh air,1,2,Mid-morning,someone who gets fresh air
+9,health,movement,health:movement,Do 5 squats,2,2,While the coffee brews,someone who moves their body
+10,health,nutrition,health:nutrition,Eat one piece of fruit,2,2,With breakfast,someone who nourishes themselves
+11,health,movement,health:movement,Walk for 5 minutes,2,5,After lunch,someone who walks daily
+12,health,movement,health:movement,Do 10 push-ups (on knees is fine),2,3,Before your shower,someone who builds strength
+13,health,mind-body,health:mind-body,Stretch your back and neck,2,3,Mid-afternoon slump,someone who cares for their body
+14,health,nutrition,health:nutrition,Add one vegetable to a meal,2,3,At dinner,someone who eats well
+15,health,sleep,health:sleep,Put your phone away 10 min before bed,2,10,When you start your bedtime routine,someone who sleeps well
+16,health,movement,health:movement,Take a 10-minute walk,3,10,After lunch,someone who walks daily
+17,health,movement,health:movement,Do a 10-minute home workout,3,10,After you change out of work clothes,someone who trains
+18,health,nutrition,health:nutrition,Cook one simple meal at home,3,20,When you get hungry for dinner,someone who feeds themselves well
+19,health,sleep,health:sleep,Go to bed at a consistent time,3,15,When your wind-down alarm goes off,someone who protects their sleep
+20,health,mind-body,health:mind-body,Stretch or do mobility for 10 minutes,3,10,In the evening,someone who stays limber
+21,health,movement,health:movement,Walk 20 minutes outside,4,20,Mid-morning or after dinner,someone who moves every day
+22,health,movement,health:movement,Do a 20-minute strength session,4,20,After work,someone who gets stronger
+23,health,nutrition,health:nutrition,Meal-prep one healthy lunch,4,30,Sunday afternoon,someone who plans their nutrition
+24,health,sleep,health:sleep,No screens for the last 30 min before bed,4,30,After your evening routine,someone who rests deeply
+25,health,movement,health:movement,Go for a 30-minute run,5,30,"First thing, or after work",a runner
+26,health,movement,health:movement,Complete a full 45-minute workout,5,45,Your set gym time,an athlete in progress
+27,health,nutrition,health:nutrition,Cook all meals from whole foods today,5,60,Across the day,someone who fuels their body
+28,career,planning,career:planning,Write down your top task for today,1,1,Before you open email,someone who works with intention
+29,career,focus,career:focus,Open the doc you're avoiding,1,1,First thing at your desk,someone who faces the hard thing
+30,career,learning,career:learning,Read one page of a work/skill book,1,2,With your morning coffee,a lifelong learner
+31,career,environment,career:environment,Tidy your desk for 2 minutes,1,2,Before you start work,someone who works in clarity
+32,career,creativity,career:creativity,Write one sentence on your side project,1,2,In the evening,a creator
+33,career,finance,career:finance,Check your bank balance,1,1,With morning coffee,someone in control of their money
+34,career,learning,career:learning,Note one thing you learned today,1,2,End of the workday,someone who grows at work
+35,career,focus,career:focus,"Do 5 minutes of focused work, no phone",2,5,Right after you sit down,someone who focuses deeply
+36,career,planning,career:planning,Plan tomorrow's 3 priorities,2,5,Before you log off,someone who works on purpose
+37,career,learning,career:learning,Watch one short tutorial,2,10,Lunch break,someone building a skill
+38,career,learning,career:learning,Read 5 pages of a book in your field,2,10,On your commute or coffee break,an expert in the making
+39,career,finance,career:finance,Save a small amount of money,2,2,On payday,someone who builds wealth slowly
+40,career,network,career:network,Reach out to one person in your industry,2,5,Late morning,someone who builds their network
+41,career,focus,career:focus,"Do 25 minutes of deep, distraction-free work",3,25,Your first work block,someone who does focused work
+42,career,skill,career:skill,Practice a skill for 15 minutes,3,15,After dinner,someone mastering their craft
+43,career,planning,career:planning,Review your weekly goals,3,10,Monday morning,someone with direction
+44,career,finance,career:finance,Log today's spending,3,10,Before bed,someone who knows their numbers
+45,career,creativity,career:creativity,Work on your side project for 20 minutes,3,20,Your protected evening slot,a builder
+46,career,focus,career:focus,Two 25-minute focus blocks with a break,4,60,Morning,someone who protects deep work
+47,career,skill,career:skill,Study/practice a skill for 30 minutes,4,30,Set study time,someone leveling up
+48,career,planning,career:planning,Draft a plan for a goal you keep postponing,4,30,Weekend morning,someone who moves goals forward
+49,career,creativity,career:creativity,Ship one small piece of the side project,5,60,Focused evening,someone who ships
+50,career,focus,career:focus,Do a 90-minute deep-work session,5,90,Your peak-energy window,a deep worker
+51,career,finance,career:finance,Review and adjust your monthly budget,5,45,Start of the month,someone who runs their finances
+52,social,connection,social:connection,Text one person 'thinking of you',1,1,Mid-morning,someone who stays connected
+53,social,connection,social:connection,Smile and greet someone,1,1,First interaction of the day,someone warm to others
+54,social,connection,social:connection,Send one message to a friend you miss,1,2,During a break,a good friend
+55,social,kindness,social:kindness,Give one genuine compliment,1,1,When you notice something,someone who lifts others
+56,social,kindness,social:kindness,Say thank you to someone specifically,1,1,When someone helps you,someone who appreciates people
+57,social,connection,social:connection,React to a friend's post thoughtfully,1,2,While scrolling,a present friend
+58,social,communication,social:communication,Ask someone how their day really is,2,3,Over dinner or a call,someone who listens
+59,social,communication,social:communication,Reply to a message you've been putting off,2,3,Evening,someone who shows up for people
+60,social,kindness,social:kindness,Do one small favor for someone,2,5,When you see the chance,a giving person
+61,social,connection,social:connection,Call a family member,2,10,After dinner,someone close to their family
+62,social,connection,social:connection,Have a 10-minute real conversation,3,10,Lunch or evening,someone who connects deeply
+63,social,connection,social:connection,Make plans to see a friend,3,10,This week,someone who nurtures friendships
+64,social,communication,social:communication,Listen fully to someone without your phone,3,15,During any conversation,a present listener
+65,social,kindness,social:kindness,Check in on someone going through a hard time,3,10,When they cross your mind,a caring friend
+66,social,connection,social:connection,Meet a friend for coffee or a walk,4,30,Weekend,someone who invests in relationships
+67,social,community,social:community,Host or join a small get-together,4,60,This weekend,someone who brings people together
+68,social,communication,social:communication,Have an honest conversation you've avoided,4,20,When it feels right,someone brave in relationships
+69,social,community,social:community,Volunteer or help in your community,5,90,Weekend,someone who gives back
+70,social,connection,social:connection,Reconnect with someone you've lost touch with,5,30,This week,someone who mends bonds
+71,spiritual,gratitude,spiritual:gratitude,Name one thing you're grateful for,1,1,Before you get out of bed,someone who notices the good
+72,spiritual,mindfulness,spiritual:mindfulness,Take 3 mindful breaths,1,1,When you feel rushed,someone who stays grounded
+73,spiritual,stillness,spiritual:stillness,Sit in silence for one minute,1,1,Before your day starts,someone at peace with stillness
+74,spiritual,reflection,spiritual:reflection,Write one line in a journal,1,2,End of the day,someone who reflects
+75,spiritual,nature,spiritual:nature,Look up at the sky for a moment,1,1,When you step outside,someone who notices wonder
+76,spiritual,meaning,spiritual:meaning,Set one gentle intention for the day,1,2,With your morning drink,someone who lives on purpose
+77,spiritual,mindfulness,spiritual:mindfulness,Put your hand on your heart and pause,1,1,In a stressful moment,someone kind to themselves
+78,spiritual,gratitude,spiritual:gratitude,Write 3 things you're grateful for,2,3,Before bed,someone who counts their blessings
+79,spiritual,mindfulness,spiritual:mindfulness,Meditate for 3 minutes,2,3,After you wake,someone who tends their mind
+80,spiritual,nature,spiritual:nature,Step outside and notice 5 things,2,5,Mid-day,someone present in the world
+81,spiritual,reflection,spiritual:reflection,Reflect on one thing that went well,2,3,End of the day,someone who honors small wins
+82,spiritual,meaning,spiritual:meaning,Read a short passage that inspires you,2,5,Morning or night,someone who feeds their spirit
+83,spiritual,mindfulness,spiritual:mindfulness,Meditate for 10 minutes,3,10,Morning,someone with a calm mind
+84,spiritual,reflection,spiritual:reflection,Journal about how you're really feeling,3,10,Evening,someone honest with themselves
+85,spiritual,nature,spiritual:nature,Take a slow walk with no phone,3,15,After dinner,someone who finds peace outdoors
+86,spiritual,meaning,spiritual:meaning,Do a short act of kindness with no reward,3,10,When the chance appears,someone who lives their values
+87,spiritual,stillness,spiritual:stillness,Sit quietly and breathe for 15 minutes,4,15,Morning or night,someone who cultivates stillness
+88,spiritual,reflection,spiritual:reflection,Write a reflection on your week,4,20,Sunday evening,someone who lives examined
+89,spiritual,nature,spiritual:nature,Spend 30 minutes in nature,4,30,Weekend,someone connected to the natural world
+90,spiritual,mindfulness,spiritual:mindfulness,Do a 20-minute guided meditation,5,20,Set daily time,someone with a deep practice
+91,spiritual,stillness,spiritual:stillness,Take a tech-free hour for reflection,5,60,Weekend morning,someone who protects their inner life
+92,spiritual,meaning,spiritual:meaning,Volunteer time toward something meaningful,5,90,Weekend,someone who serves a purpose
