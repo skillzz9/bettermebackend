@@ -7,6 +7,7 @@ from pathlib import Path
 from datetime import datetime, timedelta
 
 import json_repair
+from strength import calculate_strength_scores
 
 def parse_llm_json(text: str) -> dict:
     text = text.strip()
@@ -1406,6 +1407,16 @@ def save_workout_plan_endpoint(req: SaveWorkoutPlanRequest) -> dict:
 def update_workouts(req: WorkoutsRequest) -> dict:
     store.save_workouts(req.user_id, req.workouts)
     return {"status": "ok"}
+
+@app.get("/strength_score/{user_id}")
+def get_strength_score(user_id: str) -> dict:
+    plan = store.get_workout_plan(user_id) or {}
+    profile = store.get_profile(user_id) or {}
+    bw_lbs = profile.get("weight_lbs", 0)
+    
+    # Calculate custom scores
+    scores = calculate_strength_scores(plan, bw_lbs)
+    return scores
 
 class AddExerciseRequest(BaseModel):
     user_id: str = "local-dev-user"
