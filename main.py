@@ -1369,12 +1369,12 @@ def save_workout_plan_endpoint(req: SaveWorkoutPlanRequest) -> dict:
                 "lastWeight": str(ex.get("target_weight_lbs", 0)),
             })
         
-        first_day_name = first_day.get("day_name", "Day 1")
+        first_day_name = re.sub(r'(?i)^Day\s*\d+[:\- ]*', '', first_day.get("day_name", "Workout"))
         is_today_rest = "rest" in first_day_name.lower()
         
         workouts_data = {
             "today": {
-                "title": "Rest" if is_today_rest else first_day_name,
+                "title": "Rest Day" if is_today_rest else first_day_name,
                 "split": "Rest" if is_today_rest else first_day_name.split()[0],
                 "duration": "0 min" if is_today_rest else "45-60 min",
                 "exercises": today_exercises
@@ -1387,13 +1387,13 @@ def save_workout_plan_endpoint(req: SaveWorkoutPlanRequest) -> dict:
             future_date = today_date + timedelta(days=i+1)
             day_str = future_date.strftime("%A")
             
-            day_name = d.get("day_name", f"Day {i+2}")
+            day_name = re.sub(r'(?i)^Day\s*\d+[:\- ]*', '', d.get("day_name", f"Workout {i+2}"))
             is_rest = "rest" in day_name.lower()
             
             workouts_data["upcoming"].append({
                 "id": f"w{i+2}",
                 "date": day_str,
-                "title": "Rest" if is_rest else day_name,
+                "title": "Rest Day" if is_rest else day_name,
                 "split": "Rest" if is_rest else (day_name.split()[0] if day_name else "Day"),
                 "duration": "0 min" if is_rest else "45-60 min",
                 "exercises": [] 
