@@ -304,8 +304,7 @@ def build_workout_plan(user_id: str, history: list[dict], model: str) -> tuple[s
             model=model,
             max_tokens=2048,
             system=system_prompt,
-            messages=history,
-            output_config={"format": {"type": "json_schema", "schema": WORKOUT_SCHEMA}}
+            messages=history
         )
     except Exception as exc:
         print(f"Claude API error: {exc}")
@@ -756,8 +755,7 @@ def extract_and_store(user_id: str, history: list[dict], phase: str) -> None:
             model="claude-3-5-haiku-20241022",
             max_tokens=1000,
             system=EXTRACTION_SYSTEM,
-            messages=[{"role": "user", "content": conversation}],
-            output_config={"format": {"type": "json_schema", "schema": EXTRACTION_SCHEMA}},
+            messages=[{"role": "user", "content": conversation}]
         )
         text = next((b.text for b in response.content if b.type == "text"), "")
         data = parse_llm_json(text)
@@ -810,8 +808,7 @@ def generate_suggestions(history: list[dict], model: str = "claude-3-5-haiku-202
             model=model,
             max_tokens=200,
             system=SUGGESTION_SYSTEM,
-            messages=[{"role": "user", "content": convo}],
-            output_config={"format": {"type": "json_schema", "schema": SUGGESTION_SCHEMA}},
+            messages=[{"role": "user", "content": convo}]
         )
         text = next((b.text for b in response.content if b.type == "text"), "")
         data = parse_llm_json(text)
@@ -841,8 +838,7 @@ def suggest_initial_habits(user_id: str, history: list[dict], model: str = "clau
         model=model,
         max_tokens=1000,
         system=system,
-        messages=[{"role": "user", "content": f"Conversation so far:\n{convo_text}"}],
-        output_config={"format": {"type": "json_schema", "schema": HABIT_SUGGESTION_SCHEMA}},
+        messages=[{"role": "user", "content": f"Conversation so far:\n{convo_text}"}]
     )
     text = next((b.text for b in response.content if b.type == "text"), "")
     data = parse_llm_json(text)
@@ -868,9 +864,8 @@ def generate_final_habits(user_id: str, history: list[dict], model: str = "claud
     response = client.messages.create(
         model=model,
         max_tokens=1200,
-        system=system,
-        messages=[{"role": "user", "content": f"Full conversation:\n{convo_text}"}],
-        output_config={"format": {"type": "json_schema", "schema": FINAL_HABITS_SCHEMA}},
+        system=system + "\n\nCRITICAL: The user has made some changes or confirmations. Finalize the list of habits.",
+        messages=history
     )
     text = next((b.text for b in response.content if b.type == "text"), "")
     data = parse_llm_json(text)
@@ -1203,8 +1198,7 @@ def chat(request: ChatRequest, background_tasks: BackgroundTasks) -> ChatRespons
                 model=model_to_use,
                 max_tokens=512,
                 system=HUGO_SYSTEM_PROMPT,
-                messages=history,
-                output_config={"format": {"type": "json_schema", "schema": ONBOARDING_SCHEMA}}
+                messages=history
             )
         except anthropic.APIError as exc:
             raise HTTPException(status_code=502, detail=f"Claude API error: {exc}") from exc
@@ -1263,8 +1257,7 @@ def chat(request: ChatRequest, background_tasks: BackgroundTasks) -> ChatRespons
                 model=model_to_use,
                 max_tokens=1024,
                 system=system,
-                messages=history,
-                output_config={"format": {"type": "json_schema", "schema": EXERCISE_SCHEMA}}
+                messages=history
             )
         except anthropic.APIError as exc:
             raise HTTPException(status_code=502, detail=f"Claude API error: {exc}") from exc
@@ -1683,20 +1676,7 @@ def log_photo(req: LogPhotoRequest) -> dict:
                         }
                     ]
                 }
-            ],
-            output_config={"format": {"type": "json_schema", "schema": {
-                "type": "object",
-                "properties": {
-                    "name": {"type": "string"},
-                    "food": {"type": "string"},
-                    "cals": {"type": "integer"},
-                    "protein": {"type": "integer"},
-                    "carbs": {"type": "integer"},
-                    "fats": {"type": "integer"},
-                },
-                "required": ["name", "food", "cals", "protein", "carbs", "fats"],
-                "additionalProperties": False
-            }}}
+            ]
         )
         text = next((b.text for b in response.content if b.type == "text"), "")
         meal_data = parse_llm_json(text)
