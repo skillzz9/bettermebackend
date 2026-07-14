@@ -1413,9 +1413,11 @@ def get_strength_score(user_id: str) -> dict:
     plan = store.get_workout_plan(user_id) or {}
     profile = store.get_profile(user_id) or {}
     bw_lbs = profile.get("weight_lbs", 0)
+    name = profile.get("name", "Hugo")
     
     # Calculate custom scores
     scores = calculate_strength_scores(plan, bw_lbs)
+    scores["user_name"] = name
     return scores
 
 class AddExerciseRequest(BaseModel):
