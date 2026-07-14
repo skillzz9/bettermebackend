@@ -1595,45 +1595,37 @@ def _estimate_nutrition(user_id: str, profile: dict) -> dict:
         "calorie_history": []
     }
 
-def _reset_daily_nutrition(data: dict):
-    today_str = datetime.now().strftime("%Y-%m-%d")
-    last_updated = data.get("last_updated", "")
-    
-    if last_updated and last_updated != today_str:
-        # Save yesterday's calories before resetting
-        cal_current = data.get("macros", {}).get("calories", {}).get("current", 0)
-        cal_history = data.get("calorie_history", [])
-        cal_history.append({"date": last_updated, "calories": cal_current})
-        data["calorie_history"] = cal_history
-        
-        # Reset current macros & meals
-        for key in ["calories", "protein", "carbs", "fats"]:
-            if key in data.get("macros", {}):
-                data["macros"][key]["current"] = 0
-        data["meals"] = []
-        
-    data["last_updated"] = today_str
+def _fresh_day_from_targets(targets: dict) -> dict:
+    """Create a zeroed nutrition entry copying macro targets from a previous day."""
+    macros = {}
+    for key in ["calories", "protein", "carbs", "fats"]:
+        prev = targets.get("macros", {}).get(key, {})
+        macros[key] = {k: v for k, v in prev.items() if k != "current"}
+        macros[key]["current"] = 0
+    return {"macros": macros, "meals": []}
 
 @app.get("/nutrition/{user_id}")
 def get_nutrition(user_id: str) -> dict:
-    data = store.get_nutrition(user_id)
-    
-    if not data:
-        profile = store.get_profile(user_id)
-        data = _estimate_nutrition(user_id, profile)
-        _reset_daily_nutrition(data)
-        store.save_nutrition(user_id, data)
-        return data
+    today = datetime.now().strftime("%Y-%m-%d")
+    data = store.get_nutrition(user_id, today)
 
-    _reset_daily_nutrition(data)
-    store.save_nutrition(user_id, data)
-        
+    if not data:
+        # No entry for today — carry targets from most recent past day, or estimate
+        previous = store.get_latest_nutrition_targets(user_id)
+        if previous:
+            data = _fresh_day_from_targets(previous)
+        else:
+            profile = store.get_profile(user_id)
+            data = _estimate_nutrition(user_id, profile)
+        store.save_nutrition(user_id, data, today)
+
+    data["calorie_history"] = store.get_calorie_history(user_id)
     return data
 
 @app.post("/nutrition")
 def update_nutrition(req: NutritionRequest) -> dict:
-    req.nutrition["last_updated"] = datetime.now().strftime("%Y-%m-%d")
-    store.save_nutrition(req.user_id, req.nutrition)
+    today = datetime.now().strftime("%Y-%m-%d")
+    store.save_nutrition(req.user_id, req.nutrition, today)
     return {"status": "ok"}
 
 @app.post("/nutrition/log_photo")
@@ -1685,24 +1677,28 @@ def log_photo(req: LogPhotoRequest) -> dict:
         
     meal_data["id"] = str(uuid.uuid4())
     
-    data = store.get_nutrition(req.user_id)
+    today = datetime.now().strftime("%Y-%m-%d")
+    data = store.get_nutrition(req.user_id, today)
 
     if not data:
-        profile = store.get_profile(req.user_id)
-        data = _estimate_nutrition(req.user_id, profile)
-        
-    _reset_daily_nutrition(data)
-        
+        previous = store.get_latest_nutrition_targets(req.user_id)
+        if previous:
+            data = _fresh_day_from_targets(previous)
+        else:
+            profile = store.get_profile(req.user_id)
+            data = _estimate_nutrition(req.user_id, profile)
+
     if "meals" not in data:
         data["meals"] = []
     data["meals"].append(meal_data)
-    
+
     data["macros"]["calories"]["current"] += meal_data.get("cals", 0)
     data["macros"]["protein"]["current"] += meal_data.get("protein", 0)
     data["macros"]["carbs"]["current"] += meal_data.get("carbs", 0)
     data["macros"]["fats"]["current"] += meal_data.get("fats", 0)
-    
-    store.save_nutrition(req.user_id, data)
+
+    store.save_nutrition(req.user_id, data, today)
+    data["calorie_history"] = store.get_calorie_history(req.user_id)
     return {"status": "ok", "meal": meal_data, "nutrition": data}
 
 class WeightEntryRequest(BaseModel):

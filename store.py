@@ -424,17 +424,59 @@ def get_weight_entries(user_id: str, limit: int = 30) -> list[dict]:
 
 # ---- Nutrition ---------------------------------------------------------------
 
-def save_nutrition(user_id: str, nutrition_data: dict) -> None:
+def save_nutrition(user_id: str, nutrition_data: dict, date: str = None) -> None:
+    if not date:
+        date = datetime.now().strftime("%Y-%m-%d")
+    nutrition_data = dict(nutrition_data)
+    nutrition_data["date"] = date
     try:
-        _db().collection("users").document(user_id).set({"nutrition": nutrition_data}, merge=True)
+        _db().collection("users").document(user_id) \
+            .collection("nutrition_log").document(date) \
+            .set(nutrition_data)
     except Exception as e:
         print(f"Failed to save nutrition: {e}")
 
-def get_nutrition(user_id: str) -> dict:
+def get_nutrition(user_id: str, date: str = None) -> dict:
+    if not date:
+        date = datetime.now().strftime("%Y-%m-%d")
     try:
-        doc = _db().collection("users").document(user_id).get()
+        doc = _db().collection("users").document(user_id) \
+            .collection("nutrition_log").document(date).get()
         if doc.exists:
-            return doc.to_dict().get("nutrition", {})
+            return doc.to_dict()
         return {}
     except Exception:
         return {}
+
+def get_latest_nutrition_targets(user_id: str) -> dict | None:
+    """Return the most recent nutrition document to copy targets from."""
+    try:
+        docs = _db().collection("users").document(user_id) \
+            .collection("nutrition_log") \
+            .order_by("date", direction=firestore.Query.DESCENDING) \
+            .limit(1).stream()
+        for doc in docs:
+            return doc.to_dict()
+        return None
+    except Exception:
+        return None
+
+def get_calorie_history(user_id: str, limit: int = 30) -> list[dict]:
+    """Return [{date, calories}] for past days, oldest first, excluding today."""
+    today = datetime.now().strftime("%Y-%m-%d")
+    try:
+        docs = _db().collection("users").document(user_id) \
+            .collection("nutrition_log") \
+            .order_by("date", direction=firestore.Query.DESCENDING) \
+            .limit(limit + 1).stream()
+        entries = []
+        for doc in docs:
+            d = doc.to_dict()
+            if d.get("date") != today:
+                entries.append({
+                    "date": d.get("date"),
+                    "calories": d.get("macros", {}).get("calories", {}).get("current", 0)
+                })
+        return sorted(entries, key=lambda e: e["date"])
+    except Exception:
+        return []
