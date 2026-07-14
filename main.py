@@ -752,7 +752,7 @@ def extract_and_store(user_id: str, history: list[dict], phase: str) -> None:
     )
     try:
         response = client.messages.create(
-            model="claude-3-haiku-20240307",
+            model="claude-haiku-4-5-20251001",
             max_tokens=1000,
             system=EXTRACTION_SYSTEM,
             messages=[{"role": "user", "content": conversation}]
@@ -800,7 +800,7 @@ def extract_and_store(user_id: str, history: list[dict], phase: str) -> None:
 # Claude helpers
 # ---------------------------------------------------------------------------
 
-def generate_suggestions(history: list[dict], model: str = "claude-3-haiku-20240307") -> list[str]:
+def generate_suggestions(history: list[dict], model: str = "claude-haiku-4-5-20251001") -> list[str]:
     recent = history[-6:]
     convo = "\n".join(f"{m['role'].capitalize()}: {m['content']}" for m in recent)
     try:
@@ -818,7 +818,7 @@ def generate_suggestions(history: list[dict], model: str = "claude-3-haiku-20240
         return []
 
 
-def suggest_initial_habits(user_id: str, history: list[dict], model: str = "claude-3-haiku-20240307") -> tuple[str, list[dict], list[dict]]:
+def suggest_initial_habits(user_id: str, history: list[dict], model: str = "claude-haiku-4-5-20251001") -> tuple[str, list[dict], list[dict]]:
     profile = store.get_profile(user_id)
     memories = store.get_memories(user_id)
     habits = store.get_user_habits(user_id)
@@ -846,7 +846,7 @@ def suggest_initial_habits(user_id: str, history: list[dict], model: str = "clau
     return reply, data.get("final_habits", []), data.get("suggested_exercises", [])
 
 
-def generate_final_habits(user_id: str, history: list[dict], model: str = "claude-3-haiku-20240307") -> tuple[str, list[dict]]:
+def generate_final_habits(user_id: str, history: list[dict], model: str = "claude-haiku-4-5-20251001") -> tuple[str, list[dict]]:
     profile = store.get_profile(user_id)
     memories = store.get_memories(user_id)
     habits = store.get_user_habits(user_id)
@@ -1115,7 +1115,7 @@ def chat(request: ChatRequest, background_tasks: BackgroundTasks) -> ChatRespons
             history.append({"role": m.role, "content": text_content})
             
     # Use Haiku for everything (including vision) as it's significantly cheaper and still excellent
-    model_to_use = "claude-3-haiku-20240307"
+    model_to_use = "claude-haiku-4-5-20251001"
 
     last_user = next(
         (m.content for m in reversed(request.messages) if m.role == "user"), ""
@@ -1655,7 +1655,7 @@ def log_photo(req: LogPhotoRequest) -> dict:
 
     try:
         response = client.messages.create(
-            model="claude-3-haiku-20240307",
+            model="claude-haiku-4-5-20251001",
             max_tokens=500,
             system="You are an expert nutritionist. Estimate the macros for this food. Keep it realistic and accurate.",
             messages=[
