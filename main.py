@@ -1542,19 +1542,36 @@ def _estimate_nutrition(user_id: str, profile: dict) -> dict:
             "fats":     {"target": fats,     "current": 0},
         },
         "meals": [],
+        "last_updated": datetime.now().strftime("%Y-%m-%d")
     }
 
 @app.get("/nutrition/{user_id}")
 def get_nutrition(user_id: str) -> dict:
     data = store.get_nutrition(user_id)
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    
     if not data:
         profile = store.get_profile(user_id)
         data = _estimate_nutrition(user_id, profile)
+        data["last_updated"] = today_str
         store.save_nutrition(user_id, data)
+        return data
+
+    last_updated = data.get("last_updated", "")
+    if last_updated != today_str:
+        # Reset for new day
+        for key in ["calories", "protein", "carbs", "fats"]:
+            if key in data.get("macros", {}):
+                data["macros"][key]["current"] = 0
+        data["meals"] = []
+        data["last_updated"] = today_str
+        store.save_nutrition(user_id, data)
+        
     return data
 
 @app.post("/nutrition")
 def update_nutrition(req: NutritionRequest) -> dict:
+    req.nutrition["last_updated"] = datetime.now().strftime("%Y-%m-%d")
     store.save_nutrition(req.user_id, req.nutrition)
     return {"status": "ok"}
 
@@ -1621,9 +1638,18 @@ def log_photo(req: LogPhotoRequest) -> dict:
     meal_data["id"] = str(uuid.uuid4())
     
     data = store.get_nutrition(req.user_id)
+    today_str = datetime.now().strftime("%Y-%m-%d")
+
     if not data:
         profile = store.get_profile(req.user_id)
         data = _estimate_nutrition(req.user_id, profile)
+        data["last_updated"] = today_str
+    elif data.get("last_updated", "") != today_str:
+        for key in ["calories", "protein", "carbs", "fats"]:
+            if key in data.get("macros", {}):
+                data["macros"][key]["current"] = 0
+        data["meals"] = []
+        data["last_updated"] = today_str
         
     if "meals" not in data:
         data["meals"] = []
