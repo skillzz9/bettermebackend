@@ -363,16 +363,30 @@ HOW TO DIAGNOSE & ADAPT:
 RULES:
 1. If they are doing a normal check-in, ask ONE focused question to understand their biofeedback or friction. 
 2. IF THEY ASK A DIRECT QUESTION (e.g. about a specific physique, how to build a muscle, or general advice), DO NOT ask any check-in questions or mention skipped workouts. Just answer their question directly and helpfully.
-3. If they are fatigued, actively tell them you are adjusting their plan (e.g., reducing weight, increasing food, adding rest).
+3. If they are fatigued or plateauing, actively tell them you are adjusting their plan (e.g., reducing weight, increasing food). YOU MUST DO THIS BY INCLUDING A "proposal" IN YOUR JSON! Do NOT just say you will do it; you must propose the actual change.
 4. Keep your responses under 3 sentences (unless answering a complex question), conversational, and plain text only. No markdown. Always be supportive, never judgmental.
-5. If you feel it's highly beneficial to add or swap an exercise based on their feedback, or if they ask for exercise suggestions, include them in the `suggested_exercises` JSON array. Otherwise, leave it empty.
+5. If you feel it's highly beneficial to add or swap an exercise based on their feedback, include them in the `suggested_exercises` JSON array. Otherwise, leave it empty.
+6. IF AND ONLY IF a change to their macros (calories) would help, you can output a `proposal` block. BUT ensure it doesn't deviate from their goals (e.g. do not put them in a calorie surplus if they want to lose fat).
+  - action: "update_calories"
+  - title: "Update Daily Calories"
+  - description: e.g. "Bumping by 200 to break your plateau"
+  - oldValue: "2400 kcal"
+  - newValue: "2600 kcal"
+  - status: "pending"
+  - payload: {"calories": 2600}
 
-You must return a JSON object containing `reply` (your text response) and `suggested_exercises`."""
+7. You MUST also provide an array of 3 quick-reply `suggestions` for the user (short, natural responses the user could tap to reply to your message).
+
+You must return a JSON object containing `reply` and `suggestions`. You MAY optionally include `suggested_exercises` and a `proposal` object."""
 
 EXERCISE_SCHEMA = {
     "type": "object",
     "properties": {
         "reply": {"type": "string"},
+        "suggestions": {
+            "type": "array",
+            "items": {"type": "string"}
+        },
         "suggested_exercises": {
             "type": "array",
             "items": {
@@ -388,9 +402,24 @@ EXERCISE_SCHEMA = {
                 "required": ["name", "reason", "target_muscle", "recommended_split", "sets", "reps"],
                 "additionalProperties": False,
             }
+        },
+        "proposal": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "string"},
+                "action": {"type": "string"},
+                "title": {"type": "string"},
+                "description": {"type": "string"},
+                "oldValue": {"type": "string"},
+                "newValue": {"type": "string"},
+                "status": {"type": "string"},
+                "payload": {"type": "object"}
+            },
+            "required": ["id", "action", "title", "description", "status", "payload"],
+            "additionalProperties": False
         }
     },
-    "required": ["reply", "suggested_exercises"],
+    "required": ["reply"],
     "additionalProperties": False,
 }
 
@@ -992,6 +1021,7 @@ class ChatResponse(BaseModel):
     suggested_exercises: list[ExerciseSuggestion] | None = None
     ui_action: str | None = None
     workout_plan: dict | None = None
+    proposal: dict | None = None
 
 
 class SaveHabitsRequest(BaseModel):
@@ -1247,9 +1277,13 @@ def chat(request: ChatRequest, background_tasks: BackgroundTasks) -> ChatRespons
             history + [{"role": "assistant", "content": reply}],
             request.phase,
         )
-        suggestions = generate_suggestions(history + [{"role": "assistant", "content": reply}], model="claude-haiku-4-5-20251001")
         ex_models = [ExerciseSuggestion(**e) for e in data.get("suggested_exercises", [])]
-        return ChatResponse(reply=reply, suggestions=suggestions or None, suggested_exercises=ex_models)
+        return ChatResponse(
+            reply=reply, 
+            suggestions=data.get("suggestions"), 
+            suggested_exercises=ex_models,
+            proposal=data.get("proposal")
+        )
 
     # --- Phase: onboarding (default) ---
     habits = store.get_user_habits(request.user_id)
