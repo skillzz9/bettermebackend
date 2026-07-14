@@ -103,11 +103,15 @@ def merge_profile(old: dict, updates: dict) -> dict:
 
 # ---- Memories ----------------------------------------------------------------
 
-def get_memories(user_id: str, limit: int = 60) -> list[str]:
+def get_memories(user_id: str, limit: int = 60) -> list[dict]:
+    """Return memories as {text, created_at}, oldest first."""
     try:
         docs = _db().collection("users").document(user_id).collection("memories") \
             .order_by("created_at", direction=firestore.Query.DESCENDING).limit(limit).stream()
-        return [doc.to_dict().get("text", "") for doc in docs][::-1]
+        return [
+            {"text": doc.to_dict().get("text", ""), "created_at": doc.to_dict().get("created_at")}
+            for doc in docs
+        ][::-1]
     except Exception:
         return []
 
@@ -149,6 +153,43 @@ def add_memories(user_id: str, texts: list[str]) -> list[str]:
             print(f"Failed to add memories: {e}")
 
     return fresh
+
+# ---- Behavior events -----------------------------------------------------------
+# Dated, structured records of WHY a habit succeeded or failed on a given day.
+# These are separate from memories: memories hold durable patterns and facts,
+# behavior events hold the day-by-day evidence those patterns are built from.
+
+def add_behavior_events(user_id: str, date: str, events: list[dict]) -> None:
+    """Each event: {habit_name, outcome, reason, factor}."""
+    now = time.time()
+    valid = [e for e in events if (e.get("reason") or "").strip()]
+    if not valid:
+        return
+    try:
+        batch = _db().batch()
+        events_ref = _db().collection("users").document(user_id).collection("behavior_events")
+        for e in valid:
+            doc_ref = events_ref.document()
+            batch.set(doc_ref, {
+                "date": date,
+                "habit_name": (e.get("habit_name") or "").strip() or None,
+                "outcome": e.get("outcome", ""),
+                "reason": e["reason"].strip(),
+                "factor": e.get("factor", "other"),
+                "created_at": now,
+            })
+        batch.commit()
+    except Exception as e:
+        print(f"Failed to add behavior events: {e}")
+
+def get_behavior_events(user_id: str, limit: int = 40) -> list[dict]:
+    """Most recent behavior events, oldest first."""
+    try:
+        docs = _db().collection("users").document(user_id).collection("behavior_events") \
+            .order_by("created_at", direction=firestore.Query.DESCENDING).limit(limit).stream()
+        return [doc.to_dict() for doc in docs][::-1]
+    except Exception:
+        return []
 
 # ---- User habits -------------------------------------------------------------
 
@@ -214,6 +255,39 @@ def add_user_habit(user_id: str, habit: dict) -> dict:
     except Exception as e:
         print(f"Failed to add custom habit: {e}")
         return {}
+
+def delete_user_habit(user_id: str, habit_id: str, habit_name: str) -> None:
+    """Remove a single habit from the user's list."""
+    try:
+        _db().collection("users").document(user_id).collection("habits") \
+            .document(habit_id).delete()
+    except Exception as e:
+        print(f"Failed to save habits: {e}")
+        return []
+
+# ---- Workout Plans -----------------------------------------------------------
+
+def save_workout_plan(user_id: str, workout_plan: dict) -> None:
+    """Saves the generated workout plan JSON to Firestore."""
+    now = time.time()
+    try:
+        workout_plan["created_at"] = now
+        _db().collection("users").document(user_id).set({
+            "workout_plan": workout_plan,
+            "hasCompletedInitialChat": True
+        }, merge=True)
+    except Exception as e:
+        print(f"Failed to save workout plan: {e}")
+
+def get_workout_plan(user_id: str) -> dict | None:
+    """Retrieves the user's current workout plan."""
+    try:
+        doc = _db().collection("users").document(user_id).get()
+        if doc.exists:
+            return doc.to_dict().get("workout_plan")
+        return None
+    except Exception:
+        return None
 
 # ---- Streak & completions ----------------------------------------------------
 
@@ -303,3 +377,64 @@ def _maybe_increment_streak(user_id: str, completed_date: str) -> int:
         print(f"Failed to update streak: {e}")
         
     return new_streak
+
+# ---- Workouts ----------------------------------------------------------------
+
+def save_workouts(user_id: str, workouts_data: dict) -> None:
+    try:
+        _db().collection("users").document(user_id).set({"workouts": workouts_data}, merge=True)
+    except Exception as e:
+        print(f"Failed to save workouts: {e}")
+
+def get_workouts(user_id: str) -> dict:
+    try:
+        doc = _db().collection("users").document(user_id).get()
+        if doc.exists:
+            return doc.to_dict().get("workouts", {})
+        return {}
+    except Exception:
+        return {}
+
+# ---- Body Weight -------------------------------------------------------------
+
+def add_weight_entry(user_id: str, date: str, weight_lbs: float) -> dict:
+    """Upsert a weight entry for a given date. Returns the saved entry."""
+    now = time.time()
+    try:
+        doc_ref = _db().collection("users").document(user_id) \
+            .collection("weight_entries").document(date)
+        data = {"date": date, "weight_lbs": weight_lbs, "created_at": now}
+        doc_ref.set(data, merge=True)
+        return data
+    except Exception as e:
+        print(f"Failed to add weight entry: {e}")
+        return {}
+
+def get_weight_entries(user_id: str, limit: int = 30) -> list[dict]:
+    """Return weight entries sorted by date ascending."""
+    try:
+        docs = _db().collection("users").document(user_id) \
+            .collection("weight_entries") \
+            .order_by("date", direction=firestore.Query.DESCENDING) \
+            .limit(limit).stream()
+        entries = [doc.to_dict() for doc in docs]
+        return sorted(entries, key=lambda e: e["date"])
+    except Exception:
+        return []
+
+# ---- Nutrition ---------------------------------------------------------------
+
+def save_nutrition(user_id: str, nutrition_data: dict) -> None:
+    try:
+        _db().collection("users").document(user_id).set({"nutrition": nutrition_data}, merge=True)
+    except Exception as e:
+        print(f"Failed to save nutrition: {e}")
+
+def get_nutrition(user_id: str) -> dict:
+    try:
+        doc = _db().collection("users").document(user_id).get()
+        if doc.exists:
+            return doc.to_dict().get("nutrition", {})
+        return {}
+    except Exception:
+        return {}
