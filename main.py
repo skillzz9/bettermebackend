@@ -4,7 +4,7 @@ import os
 import random
 import re
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import json_repair
 
@@ -291,7 +291,7 @@ def build_workout_plan(user_id: str, history: list[dict], model: str) -> tuple[s
     memory_ctx = build_memory_context(profile, memories, [], {})
     
     fitness_laws = ""
-    laws_path = Path(__file__).parent.parent / "fitness_laws.md"
+    laws_path = Path(__file__).parent / "fitness_laws.md"
     if laws_path.exists():
         with open(laws_path, "r") as f:
             fitness_laws = f.read()
@@ -1368,24 +1368,33 @@ def save_workout_plan_endpoint(req: SaveWorkoutPlanRequest) -> dict:
                 "lastWeight": str(ex.get("target_weight_lbs", 0)),
             })
         
+        first_day_name = first_day.get("day_name", "Day 1")
+        is_today_rest = "rest" in first_day_name.lower()
+        
         workouts_data = {
             "today": {
-                "title": first_day.get("day_name", "Day 1"),
-                "split": first_day.get("day_name", "Day 1").split()[0],
-                "duration": "45-60 min",
+                "title": "Rest" if is_today_rest else first_day_name,
+                "split": "Rest" if is_today_rest else first_day_name.split()[0],
+                "duration": "0 min" if is_today_rest else "45-60 min",
                 "exercises": today_exercises
             },
             "upcoming": []
         }
 
-        date_labels = ["Tomorrow", "Day after", "In 3 days", "In 4 days", "In 5 days", "In 6 days"]
+        today_date = datetime.now()
         for i, d in enumerate(days[1:]):
+            future_date = today_date + timedelta(days=i+1)
+            day_str = future_date.strftime("%A")
+            
+            day_name = d.get("day_name", f"Day {i+2}")
+            is_rest = "rest" in day_name.lower()
+            
             workouts_data["upcoming"].append({
                 "id": f"w{i+2}",
-                "date": date_labels[i] if i < len(date_labels) else f"Day {i+2}",
-                "title": d.get("day_name", f"Day {i+2}"),
-                "split": d.get("day_name", "").split()[0] if d.get("day_name") else "Day",
-                "duration": "45-60 min",
+                "date": day_str,
+                "title": "Rest" if is_rest else day_name,
+                "split": "Rest" if is_rest else (day_name.split()[0] if day_name else "Day"),
+                "duration": "0 min" if is_rest else "45-60 min",
                 "exercises": [] 
             })
         
