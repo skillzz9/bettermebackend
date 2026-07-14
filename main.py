@@ -1539,33 +1539,44 @@ def _estimate_nutrition(user_id: str, profile: dict) -> dict:
             "calories": {"target": calories, "current": 0, "tdee": tdee, "balance": balance},
             "protein":  {"target": protein,  "current": 0},
             "carbs":    {"target": carbs,    "current": 0},
-            "fats":     {"target": fats,     "current": 0},
         },
         "meals": [],
-        "last_updated": datetime.now().strftime("%Y-%m-%d")
+        "last_updated": datetime.now().strftime("%Y-%m-%d"),
+        "calorie_history": []
     }
 
-@app.get("/nutrition/{user_id}")
-def get_nutrition(user_id: str) -> dict:
-    data = store.get_nutrition(user_id)
+def _reset_daily_nutrition(data: dict):
     today_str = datetime.now().strftime("%Y-%m-%d")
-    
-    if not data:
-        profile = store.get_profile(user_id)
-        data = _estimate_nutrition(user_id, profile)
-        data["last_updated"] = today_str
-        store.save_nutrition(user_id, data)
-        return data
-
     last_updated = data.get("last_updated", "")
-    if last_updated != today_str:
-        # Reset for new day
+    
+    if last_updated and last_updated != today_str:
+        # Save yesterday's calories before resetting
+        cal_current = data.get("macros", {}).get("calories", {}).get("current", 0)
+        cal_history = data.get("calorie_history", [])
+        cal_history.append({"date": last_updated, "calories": cal_current})
+        data["calorie_history"] = cal_history
+        
+        # Reset current macros & meals
         for key in ["calories", "protein", "carbs", "fats"]:
             if key in data.get("macros", {}):
                 data["macros"][key]["current"] = 0
         data["meals"] = []
-        data["last_updated"] = today_str
+        
+    data["last_updated"] = today_str
+
+@app.get("/nutrition/{user_id}")
+def get_nutrition(user_id: str) -> dict:
+    data = store.get_nutrition(user_id)
+    
+    if not data:
+        profile = store.get_profile(user_id)
+        data = _estimate_nutrition(user_id, profile)
+        _reset_daily_nutrition(data)
         store.save_nutrition(user_id, data)
+        return data
+
+    _reset_daily_nutrition(data)
+    store.save_nutrition(user_id, data)
         
     return data
 
@@ -1638,18 +1649,12 @@ def log_photo(req: LogPhotoRequest) -> dict:
     meal_data["id"] = str(uuid.uuid4())
     
     data = store.get_nutrition(req.user_id)
-    today_str = datetime.now().strftime("%Y-%m-%d")
 
     if not data:
         profile = store.get_profile(req.user_id)
         data = _estimate_nutrition(req.user_id, profile)
-        data["last_updated"] = today_str
-    elif data.get("last_updated", "") != today_str:
-        for key in ["calories", "protein", "carbs", "fats"]:
-            if key in data.get("macros", {}):
-                data["macros"][key]["current"] = 0
-        data["meals"] = []
-        data["last_updated"] = today_str
+        
+    _reset_daily_nutrition(data)
         
     if "meals" not in data:
         data["meals"] = []
