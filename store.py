@@ -95,9 +95,14 @@ def merge_profile(old: dict, updates: dict) -> dict:
         seen = {x.lower() for x in current}
         for value in updates.get(key) or []:
             value = value.strip()
-            if value and value.lower() not in seen:
-                current.append(value)
-                seen.add(value.lower())
+            if not value:
+                continue
+            value_lower = value.lower()
+            # Skip if any existing entry is a substring match (catches rephrasing)
+            if any(value_lower in s or s in value_lower for s in seen):
+                continue
+            current.append(value)
+            seen.add(value_lower)
         new[key] = current
     return new
 
