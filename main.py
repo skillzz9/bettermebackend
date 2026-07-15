@@ -1639,27 +1639,17 @@ def update_nutrition(req: NutritionRequest) -> dict:
     store.save_nutrition(req.user_id, req.nutrition, today)
     return {"status": "ok"}
 
-@app.post("/nutrition/log_photo")
-def log_photo(req: LogPhotoRequest) -> dict:
-    import uuid
-    
-    import io
-    from PIL import Image
+class LogReviewedMealRequest(BaseModel):
+    user_id: str
+    name: str
+    components: list
 
+@app.post("/nutrition/analyze_photo")
+def analyze_photo(req: LogPhotoRequest) -> dict:
     # Strip data URI prefix if present
     base64_data = req.image_base64
     if "," in base64_data[:50]:
         _, base64_data = base64_data.split(",", 1)
-
-    # Convert any format (HEIC, PNG, WebP, etc.) to JPEG using Pillow
-    try:
-        raw = __import__("base64").b64decode(base64_data)
-        img = Image.open(io.BytesIO(raw)).convert("RGB")
-        buf = io.BytesIO()
-        img.save(buf, format="JPEG", quality=70)
-        base64_data = __import__("base64").b64encode(buf.getvalue()).decode()
-    except Exception as e:
-        print(f"[log_photo] image conversion failed: {e}")
 
     media_type = "image/jpeg"
 
@@ -1670,13 +1660,15 @@ def log_photo(req: LogPhotoRequest) -> dict:
             system=(
                 "You are an expert nutritionist. Analyze the food in the image and return ONLY a JSON object "
                 "with these exact fields:\n"
-                '- "name": short meal name (e.g. "Grilled Chicken Breast")\n'
-                '- "food": brief description of what you see (e.g. "Grilled chicken with roasted vegetables")\n'
-                '- "cals": total calories as an integer\n'
-                '- "protein": protein in grams as an integer\n'
-                '- "carbs": carbohydrates in grams as an integer\n'
-                '- "fats": fats in grams as an integer\n\n'
-                "Return only the JSON object, no other text. Be realistic and accurate."
+                '- "name": short meal name (e.g. "Breakfast Bowl")\n'
+                '- "components": a list of components, each with:\n'
+                '  - "name": name of the component\n'
+                '  - "quantity": quantity (e.g. "2 eggs", "150g", "1 slice")\n'
+                '  - "cals": calories as integer\n'
+                '  - "protein": protein in grams as integer\n'
+                '  - "carbs": carbs in grams as integer\n'
+                '  - "fats": fats in grams as integer\n\n'
+                "Return only the JSON object, no other text."
             ),
             messages=[
                 {
@@ -1692,21 +1684,56 @@ def log_photo(req: LogPhotoRequest) -> dict:
                         },
                         {
                             "type": "text",
-                            "text": "Analyze this food and return the JSON with name, food description, cals, protein, carbs, and fats."
+                            "text": "Analyze this food and return the JSON with name and components list."
                         }
                     ]
                 }
             ]
         )
         text = next((b.text for b in response.content if b.type == "text"), "")
-        meal_data = parse_llm_json(text)
-        if not meal_data or "cals" not in meal_data:
-            raise HTTPException(status_code=502, detail="Could not parse nutrition data from image")
+        analysis_data = parse_llm_json(text)
+        if not analysis_data or "components" not in analysis_data:
+            raise HTTPException(status_code=502, detail="Could not parse components data from image")
     except HTTPException:
         raise
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"LLM error: {exc}")
         
+    return {"status": "ok", "analysis": analysis_data}
+
+@app.post("/nutrition/log_reviewed_meal")
+def log_reviewed_meal(req: LogReviewedMealRequest) -> dict:
+    import uuid
+    import json
+    try:
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=300,
+            system=(
+                "You are an expert nutritionist. Review the user's edited list of meal components. "
+                "Recalculate and polish the total nutrition facts. Return ONLY a JSON object with these exact fields:\n"
+                '- "name": short meal name\n'
+                '- "food": brief description of what it consists of based on the components\n'
+                '- "cals": total calories as an integer\n'
+                '- "protein": total protein in grams as an integer\n'
+                '- "carbs": total carbs in grams as an integer\n'
+                '- "fats": total fats in grams as an integer\n\n'
+                "Return only the JSON object, no other text."
+            ),
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"Meal Name: {req.name}\nComponents: {json.dumps(req.components)}\n\nCalculate totals and return JSON."
+                }
+            ]
+        )
+        text = next((b.text for b in response.content if b.type == "text"), "")
+        meal_data = parse_llm_json(text)
+        if not meal_data or "cals" not in meal_data:
+            raise HTTPException(status_code=502, detail="Could not parse final nutrition data")
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"LLM error: {exc}")
+
     meal_data["id"] = str(uuid.uuid4())
     
     today = datetime.now().strftime("%Y-%m-%d")
