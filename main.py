@@ -1623,6 +1623,13 @@ def get_nutrition(user_id: str, date: str = None) -> dict:
             data = _estimate_nutrition(user_id, profile)
         store.save_nutrition(user_id, data, today)
 
+    # Always recompute balance from target - tdee so stale/corrupt stored values never surface
+    cals = data.get("macros", {}).get("calories", {})
+    t = cals.get("target", 0)
+    tdee = cals.get("tdee", t)
+    if t:
+        data["macros"]["calories"]["balance"] = t - tdee
+
     data["calorie_history"] = store.get_calorie_history(user_id)
     return data
 
