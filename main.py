@@ -1655,7 +1655,7 @@ def analyze_photo(req: LogPhotoRequest) -> dict:
 
     try:
         response = client.messages.create(
-            model="claude-haiku-4-5-20251001",
+            model="claude-3-5-sonnet-20241022",
             max_tokens=500,
             system=(
                 "You are an expert nutritionist. Analyze the food in the image and return ONLY a JSON object "
@@ -1707,7 +1707,7 @@ def log_reviewed_meal(req: LogReviewedMealRequest) -> dict:
     import json
     try:
         response = client.messages.create(
-            model="claude-haiku-4-5-20251001",
+            model="claude-3-5-sonnet-20241022",
             max_tokens=300,
             system=(
                 "You are an expert nutritionist. Review the user's edited list of meal components. "
