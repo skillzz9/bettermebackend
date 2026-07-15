@@ -439,28 +439,32 @@ def save_nutrition(user_id: str, nutrition_data: dict, date: str = None) -> None
 def get_nutrition(user_id: str, date: str = None) -> dict:
     if not date:
         date = datetime.now().strftime("%Y-%m-%d")
+    log_data = None
     try:
         doc = _db().collection("users").document(user_id) \
             .collection("nutrition_log").document(date).get()
         if doc.exists:
-            return doc.to_dict()
+            log_data = doc.to_dict()
     except Exception:
         pass
-    # Legacy fallback: check old single-field storage for this date
+    # Legacy fallback: if no log entry, or log entry has no meals,
+    # check old single-field storage for this date
     try:
         doc = _db().collection("users").document(user_id).get()
         if doc.exists:
             legacy = doc.to_dict().get("nutrition", {})
             if legacy and legacy.get("last_updated") == date:
-                # Migrate it into the subcollection so future reads are fast
-                legacy["date"] = date
-                _db().collection("users").document(user_id) \
-                    .collection("nutrition_log").document(date) \
-                    .set(legacy)
-                return legacy
+                legacy_meals = legacy.get("meals") or []
+                log_meals = (log_data or {}).get("meals") or []
+                if legacy_meals and not log_meals:
+                    legacy["date"] = date
+                    _db().collection("users").document(user_id) \
+                        .collection("nutrition_log").document(date) \
+                        .set(legacy)
+                    return legacy
     except Exception:
         pass
-    return {}
+    return log_data or {}
 
 def get_latest_nutrition_targets(user_id: str) -> dict | None:
     """Return the most recent nutrition document to copy targets from.
