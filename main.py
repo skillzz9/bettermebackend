@@ -1653,7 +1653,17 @@ def log_photo(req: LogPhotoRequest) -> dict:
         response = client.messages.create(
             model="claude-haiku-4-5-20251001",
             max_tokens=500,
-            system="You are an expert nutritionist. Estimate the macros for this food. Keep it realistic and accurate.",
+            system=(
+                "You are an expert nutritionist. Analyze the food in the image and return ONLY a JSON object "
+                "with these exact fields:\n"
+                '- "name": short meal name (e.g. "Grilled Chicken Breast")\n'
+                '- "food": brief description of what you see (e.g. "Grilled chicken with roasted vegetables")\n'
+                '- "cals": total calories as an integer\n'
+                '- "protein": protein in grams as an integer\n'
+                '- "carbs": carbohydrates in grams as an integer\n'
+                '- "fats": fats in grams as an integer\n\n'
+                "Return only the JSON object, no other text. Be realistic and accurate."
+            ),
             messages=[
                 {
                     "role": "user",
@@ -1668,7 +1678,7 @@ def log_photo(req: LogPhotoRequest) -> dict:
                         },
                         {
                             "type": "text",
-                            "text": "What is this food? Estimate its calories, protein, carbs, and fats."
+                            "text": "Analyze this food and return the JSON with name, food description, cals, protein, carbs, and fats."
                         }
                     ]
                 }
@@ -1676,6 +1686,10 @@ def log_photo(req: LogPhotoRequest) -> dict:
         )
         text = next((b.text for b in response.content if b.type == "text"), "")
         meal_data = parse_llm_json(text)
+        if not meal_data or "cals" not in meal_data:
+            raise HTTPException(status_code=502, detail="Could not parse nutrition data from image")
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"LLM error: {exc}")
         
