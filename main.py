@@ -1483,6 +1483,13 @@ def get_strength_score(user_id: str) -> dict:
     plan = store.get_workout_plan(user_id) or {}
     profile = store.get_profile(user_id) or {}
     bw_lbs = profile.get("weight_lbs", 0)
+    if not bw_lbs or bw_lbs == 0:
+        entries = store.get_weight_entries(user_id, limit=1)
+        if entries:
+            bw_lbs = entries[-1].get("weight_lbs", 180)
+        else:
+            bw_lbs = 180
+            
     name = profile.get("name", "Hugo")
     
     # Calculate custom scores
