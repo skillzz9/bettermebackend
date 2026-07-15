@@ -1249,7 +1249,27 @@ def chat(request: ChatRequest, background_tasks: BackgroundTasks) -> ChatRespons
         if has_image:
             system = PHYSIQUE_ANALYSIS_SYSTEM
         else:
+            # Try to inject today's workout context
+            today_date = datetime.now().strftime("%Y-%m-%d")
+            today_log = store.get_workout_log(request.user_id, today_date)
+            workout_ctx = ""
+            if today_log and "title" in today_log:
+                workout_ctx = f"The user completed a workout today: '{today_log['title']}'. They successfully logged it."
+
+            # Fetch nutrition memory specifically for daily chat context
+            nutrition_date = datetime.now().strftime("%Y-%m-%d")
+            nutrition_data = store.get_nutrition(request.user_id, nutrition_date) or {}
+            meals_ctx = ""
+            if nutrition_data.get("meals"):
+                meal_names = [m.get("name") for m in nutrition_data["meals"]]
+                cals = nutrition_data.get("macros", {}).get("calories", {}).get("current", 0)
+                meals_ctx = f"Today the user ate: {', '.join(meal_names)}. Total calories so far: {cals}."
+                
             system = DAILY_CHAT_SYSTEM + "\n" + memory_ctx
+            if workout_ctx:
+                system += "\n" + workout_ctx
+            if meals_ctx:
+                system += "\n" + meals_ctx
             
         try:
             response = client.messages.create(
