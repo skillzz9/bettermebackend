@@ -1287,6 +1287,8 @@ def chat(request: ChatRequest, background_tasks: BackgroundTasks) -> ChatRespons
             data = {"reply": text, "suggested_exercises": []}
             
         reply = data.get("reply", "")
+        if reply:
+            reply = reply.replace("—", "-").replace("—", "-")
         
         if last_user and reply:
             background_tasks.add_task(
@@ -1300,11 +1302,20 @@ def chat(request: ChatRequest, background_tasks: BackgroundTasks) -> ChatRespons
             ex_list = []
         ex_models = [ExerciseSuggestion(**e) for e in ex_list]
         
+        proposal = data.get("proposal")
+        if proposal and "id" not in proposal:
+            import uuid
+            proposal["id"] = str(uuid.uuid4())
+            
+        suggs = data.get("suggestions")
+        if not suggs or not isinstance(suggs, list) or len(suggs) == 0:
+            suggs = generate_suggestions(history + [{"role": "assistant", "content": reply}], model=model_to_use)
+        
         return ChatResponse(
             reply=reply, 
-            suggestions=data.get("suggestions") or None, 
+            suggestions=suggs or None, 
             suggested_exercises=ex_models,
-            proposal=data.get("proposal")
+            proposal=proposal
         )
 
     # --- Phase: onboarding (default) ---
@@ -1323,6 +1334,9 @@ def chat(request: ChatRequest, background_tasks: BackgroundTasks) -> ChatRespons
     except anthropic.APIError as exc:
         raise HTTPException(status_code=502, detail=f"Claude API error: {exc}") from exc
     reply = next((b.text for b in response.content if b.type == "text"), "")
+    if reply:
+        reply = reply.replace("—", "-").replace("—", "-")
+        
     if last_user and reply:
         background_tasks.add_task(
             extract_and_store,
