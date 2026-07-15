@@ -1643,18 +1643,25 @@ def update_nutrition(req: NutritionRequest) -> dict:
 def log_photo(req: LogPhotoRequest) -> dict:
     import uuid
     
+    import io
+    from PIL import Image
+
     # Strip data URI prefix if present
     base64_data = req.image_base64
     if "," in base64_data[:50]:
         _, base64_data = base64_data.split(",", 1)
-        
-    # Detect media type from magic bytes
-    if base64_data.startswith("iVBORw0KGgo"):
-        media_type = "image/png"
-    elif base64_data.startswith("UklGR"):
-        media_type = "image/webp"
-    else:
-        media_type = "image/jpeg"
+
+    # Convert any format (HEIC, PNG, WebP, etc.) to JPEG using Pillow
+    try:
+        raw = __import__("base64").b64decode(base64_data)
+        img = Image.open(io.BytesIO(raw)).convert("RGB")
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=70)
+        base64_data = __import__("base64").b64encode(buf.getvalue()).decode()
+    except Exception as e:
+        print(f"[log_photo] image conversion failed: {e}")
+
+    media_type = "image/jpeg"
 
     try:
         response = client.messages.create(
