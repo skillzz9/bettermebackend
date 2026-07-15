@@ -1059,6 +1059,7 @@ class NutritionRequest(BaseModel):
 class LogPhotoRequest(BaseModel):
     user_id: str
     image_base64: str
+    hand_width_cm: float | None = None
 
 # ---------------------------------------------------------------------------
 # Endpoints
@@ -1768,22 +1769,50 @@ def analyze_photo(req: LogPhotoRequest) -> dict:
 
     media_type = "image/jpeg"
 
+    hand_hint = (
+        f"The user's hand is {req.hand_width_cm}cm wide across the palm. "
+        "If a hand is visible, it is your most reliable scale reference — measure food against it."
+        if req.hand_width_cm
+        else "A hand may be visible for scale (average adult palm is ~9cm wide)."
+    )
+
     try:
         response = client.messages.create(
             model="claude-sonnet-5",
-            max_tokens=500,
+            max_tokens=1000,
+            temperature=0.2,
             system=(
-                "You are an expert nutritionist. Analyze the food in the image and return ONLY a JSON object "
-                "with these exact fields:\n"
-                '- "name": short meal name (e.g. "Breakfast Bowl")\n'
-                '- "components": a list of components, each with:\n'
-                '  - "name": name of the component\n'
-                '  - "quantity": quantity (e.g. "2 eggs", "150g", "1 slice")\n'
-                '  - "cals": calories as integer\n'
-                '  - "protein": protein in grams as integer\n'
-                '  - "carbs": carbs in grams as integer\n'
-                '  - "fats": fats in grams as integer\n\n'
-                "Return only the JSON object, no other text."
+                "You estimate calories and macros from food photos. Accuracy of QUANTITY is your "
+                "primary job — identifying the food is easy, sizing it correctly is what matters.\n\n"
+                f"SCALE: {hand_hint} Other references in order of reliability: utensils "
+                "(fork ~19cm), plates (dinner ~27cm, side ~20cm), cans (12cm tall), standard bowls "
+                "(cereal bowl holds ~400ml when full).\n\n"
+                "SIZING METHOD:\n"
+                "1. Identify each distinct food component and its cooking method (fried adds ~40-120 kcal "
+                "per serving vs grilled/boiled; assume oil was used unless clearly steamed or raw).\n"
+                "2. Judge the container's real size using a scale reference, then how full it is. "
+                "Bowls hide volume — a bowl that looks half full often holds a full serving in its depth.\n"
+                "3. Convert volume to weight using density: cooked rice/pasta/grains ~0.8g/ml, "
+                "meat ~1g/ml, salad greens ~0.1g/ml, stews/curries ~0.9g/ml.\n"
+                "4. Common calibration anchors — cooked rice 130 kcal/100g, cooked pasta 155 kcal/100g, "
+                "cooked chicken breast 165 kcal/100g, bread 265 kcal/100g, cheese ~400 kcal/100g, "
+                "oil 900 kcal/100g. A typical restaurant/home bowl of rice is 200-300g cooked.\n"
+                "5. If packaging with a visible label is shown, use the label's values and the package "
+                "size — do not estimate visually.\n"
+                "6. Untracked people underestimate portions ~30%. When torn between two sizes, "
+                "pick the larger. Include cooking oil, butter, dressings and sauces as components "
+                "when plausibly present.\n\n"
+                "Return ONLY a JSON object, no other text, with fields IN THIS ORDER:\n"
+                '- "scale_reasoning": 1-2 sentences — what scale reference you used and the estimated '
+                "container size/fullness. Write this FIRST, before any numbers.\n"
+                '- "name": short meal name (e.g. "Chicken Rice Bowl")\n'
+                '- "components": list, each with:\n'
+                '  - "name": component name including cooking method (e.g. "Pan-fried chicken thigh")\n'
+                '  - "quantity": estimated amount (e.g. "250g cooked", "2 large eggs", "1 tbsp oil")\n'
+                '  - "cals": integer\n'
+                '  - "protein": grams, integer\n'
+                '  - "carbs": grams, integer\n'
+                '  - "fats": grams, integer'
             ),
             messages=[
                 {
@@ -1799,7 +1828,7 @@ def analyze_photo(req: LogPhotoRequest) -> dict:
                         },
                         {
                             "type": "text",
-                            "text": "Analyze this food and return the JSON with name and components list."
+                            "text": "Estimate this meal. Reason about scale first, then output the JSON."
                         }
                     ]
                 }
