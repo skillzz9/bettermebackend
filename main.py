@@ -1589,6 +1589,7 @@ def _estimate_nutrition(user_id: str, profile: dict) -> dict:
             "calories": {"target": calories, "current": 0, "tdee": tdee, "balance": balance},
             "protein":  {"target": protein,  "current": 0},
             "carbs":    {"target": carbs,    "current": 0},
+            "fats":     {"target": fats,     "current": 0},
         },
         "meals": [],
         "last_updated": datetime.now().strftime("%Y-%m-%d"),

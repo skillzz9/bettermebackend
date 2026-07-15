@@ -449,7 +449,8 @@ def get_nutrition(user_id: str, date: str = None) -> dict:
         return {}
 
 def get_latest_nutrition_targets(user_id: str) -> dict | None:
-    """Return the most recent nutrition document to copy targets from."""
+    """Return the most recent nutrition document to copy targets from.
+    Falls back to the legacy nutrition field for users who haven't migrated yet."""
     try:
         docs = _db().collection("users").document(user_id) \
             .collection("nutrition_log") \
@@ -457,9 +458,18 @@ def get_latest_nutrition_targets(user_id: str) -> dict | None:
             .limit(1).stream()
         for doc in docs:
             return doc.to_dict()
-        return None
     except Exception:
-        return None
+        pass
+    # Legacy fallback: old single-field storage
+    try:
+        doc = _db().collection("users").document(user_id).get()
+        if doc.exists:
+            legacy = doc.to_dict().get("nutrition")
+            if legacy:
+                return legacy
+    except Exception:
+        pass
+    return None
 
 def get_calorie_history(user_id: str, limit: int = 30) -> list[dict]:
     """Return [{date, calories}] for past days, oldest first, excluding today."""
