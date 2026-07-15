@@ -1503,6 +1503,43 @@ def add_exercise(req: AddExerciseRequest) -> dict:
         store.save_workouts(req.user_id, workouts)
         return {"status": "ok", "workouts": workouts, "note": "Added to today because split was not found"}
 
+class SaveWorkoutLogRequest(BaseModel):
+    user_id: str
+    date: str
+    log_data: dict
+
+@app.post("/workouts/log")
+def save_workout_log(req: SaveWorkoutLogRequest) -> dict:
+    store.save_workout_log(req.user_id, req.date, req.log_data)
+    
+    # Send a message to Hugo about the workout!
+    workout_summary = f"I just crushed a workout! ({req.log_data.get('title', 'Workout')}) 💪"
+    memories = store.get_memories(req.user_id)
+    history = []
+    
+    import threading
+    def respond_to_workout():
+        try:
+            reply, _ = generate_ai_response(
+                req.user_id, 
+                history + [{"role": "user", "content": workout_summary}], 
+                memories
+            )
+            # In a real app we'd save this chat or push it to the frontend via sockets
+        except:
+            pass
+    threading.Thread(target=respond_to_workout).start()
+    
+    return {"status": "ok"}
+
+@app.get("/workouts/log/{user_id}")
+def get_workout_log(user_id: str, date: str = None) -> dict:
+    if not date:
+        date = datetime.now().strftime("%Y-%m-%d")
+    log_data = store.get_workout_log(user_id, date)
+    history = store.get_workout_history(user_id, 30)
+    return {"log": log_data, "history": history}
+
 def _estimate_nutrition(user_id: str, profile: dict) -> dict:
     """Estimate macro targets using Mifflin-St Jeor BMR + activity level from workout plan."""
     settings = store.get_settings(user_id)

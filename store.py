@@ -522,3 +522,33 @@ def get_calorie_history(user_id: str, limit: int = 30) -> list[dict]:
         pass
     entries = [{"date": d, "calories": c} for d, c in entries_by_date.items()]
     return sorted(entries, key=lambda e: e["date"])[-limit:]
+
+def save_workout_log(user_id: str, date: str, log_data: dict) -> None:
+    try:
+        log_data["date"] = date
+        log_data["created_at"] = time.time()
+        _db().collection("users").document(user_id) \
+            .collection("workout_logs").document(date) \
+            .set(log_data)
+    except Exception as e:
+        print(f"Failed to save workout log: {e}")
+
+def get_workout_log(user_id: str, date: str) -> dict:
+    try:
+        doc = _db().collection("users").document(user_id) \
+            .collection("workout_logs").document(date).get()
+        if doc.exists:
+            return doc.to_dict()
+    except Exception:
+        pass
+    return {}
+
+def get_workout_history(user_id: str, limit: int = 30) -> list[dict]:
+    try:
+        docs = _db().collection("users").document(user_id) \
+            .collection("workout_logs") \
+            .order_by("date", direction=firestore.Query.DESCENDING) \
+            .limit(limit).stream()
+        return [doc.to_dict() for doc in docs]
+    except Exception:
+        return []
