@@ -1512,6 +1512,43 @@ class SaveWorkoutLogRequest(BaseModel):
 def save_workout_log(req: SaveWorkoutLogRequest) -> dict:
     store.save_workout_log(req.user_id, req.date, req.log_data)
     
+    # Auto-update workout plan target weights based on what they just logged
+    try:
+        plan = store.get_workout_plan(req.user_id)
+        if plan and "days" in plan:
+            updated = False
+            logged_weights = req.log_data.get("logged_weights", {})
+            exercises = req.log_data.get("exercises", [])
+            
+            # Find the max weight for each exercise in this log
+            max_weights_for_ex = {}
+            for key, weight_str in logged_weights.items():
+                try:
+                    ex_idx = int(key.split("-")[0])
+                    weight = float(weight_str)
+                    if ex_idx not in max_weights_for_ex or weight > max_weights_for_ex[ex_idx]:
+                        max_weights_for_ex[ex_idx] = weight
+                except:
+                    pass
+            
+            # Map back to the plan
+            for ex_idx, max_weight in max_weights_for_ex.items():
+                if ex_idx < len(exercises):
+                    ex_name = exercises[ex_idx].get("name", "").lower()
+                    # Find this exercise in the plan
+                    for day in plan["days"]:
+                        for p_ex in day.get("exercises", []):
+                            if p_ex.get("name", "").lower() == ex_name:
+                                current_weight = float(p_ex.get("target_weight_lbs", 0) or 0)
+                                if max_weight > current_weight:
+                                    p_ex["target_weight_lbs"] = max_weight
+                                    updated = True
+            
+            if updated:
+                store.save_workout_plan(req.user_id, plan)
+    except Exception as e:
+        print(f"Error updating plan weights: {e}")
+    
     # Send a message to Hugo about the workout!
     workout_summary = f"I just crushed a workout! ({req.log_data.get('title', 'Workout')}) 💪"
     memories = store.get_memories(req.user_id)
