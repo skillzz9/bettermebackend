@@ -444,9 +444,23 @@ def get_nutrition(user_id: str, date: str = None) -> dict:
             .collection("nutrition_log").document(date).get()
         if doc.exists:
             return doc.to_dict()
-        return {}
     except Exception:
-        return {}
+        pass
+    # Legacy fallback: check old single-field storage for this date
+    try:
+        doc = _db().collection("users").document(user_id).get()
+        if doc.exists:
+            legacy = doc.to_dict().get("nutrition", {})
+            if legacy and legacy.get("last_updated") == date:
+                # Migrate it into the subcollection so future reads are fast
+                legacy["date"] = date
+                _db().collection("users").document(user_id) \
+                    .collection("nutrition_log").document(date) \
+                    .set(legacy)
+                return legacy
+    except Exception:
+        pass
+    return {}
 
 def get_latest_nutrition_targets(user_id: str) -> dict | None:
     """Return the most recent nutrition document to copy targets from.
@@ -474,19 +488,28 @@ def get_latest_nutrition_targets(user_id: str) -> dict | None:
 def get_calorie_history(user_id: str, limit: int = 30) -> list[dict]:
     """Return [{date, calories}] for past days, oldest first, excluding today."""
     today = datetime.now().strftime("%Y-%m-%d")
+    entries_by_date = {}
     try:
         docs = _db().collection("users").document(user_id) \
             .collection("nutrition_log") \
             .order_by("date", direction=firestore.Query.DESCENDING) \
             .limit(limit + 1).stream()
-        entries = []
         for doc in docs:
             d = doc.to_dict()
-            if d.get("date") != today:
-                entries.append({
-                    "date": d.get("date"),
-                    "calories": d.get("macros", {}).get("calories", {}).get("current", 0)
-                })
-        return sorted(entries, key=lambda e: e["date"])
+            date = d.get("date")
+            if date and date != today:
+                entries_by_date[date] = d.get("macros", {}).get("calories", {}).get("current", 0)
     except Exception:
-        return []
+        pass
+    # Include legacy single-field entry if it's a past date not already covered
+    try:
+        doc = _db().collection("users").document(user_id).get()
+        if doc.exists:
+            legacy = doc.to_dict().get("nutrition", {})
+            legacy_date = legacy.get("last_updated") if legacy else None
+            if legacy_date and legacy_date != today and legacy_date not in entries_by_date:
+                entries_by_date[legacy_date] = legacy.get("macros", {}).get("calories", {}).get("current", 0)
+    except Exception:
+        pass
+    entries = [{"date": d, "calories": c} for d, c in entries_by_date.items()]
+    return sorted(entries, key=lambda e: e["date"])[-limit:]
