@@ -1605,12 +1605,16 @@ def _fresh_day_from_targets(targets: dict) -> dict:
     return {"macros": macros, "meals": []}
 
 @app.get("/nutrition/{user_id}")
-def get_nutrition(user_id: str) -> dict:
+def get_nutrition(user_id: str, date: str = None) -> dict:
     today = datetime.now().strftime("%Y-%m-%d")
-    data = store.get_nutrition(user_id, today)
+    target_date = date or today
+    is_today = (target_date == today)
+
+    data = store.get_nutrition(user_id, target_date)
 
     if not data:
-        # No entry for today — carry targets from most recent past day, or estimate
+        if not is_today:
+            return {}
         previous = store.get_latest_nutrition_targets(user_id)
         if previous:
             data = _fresh_day_from_targets(previous)
