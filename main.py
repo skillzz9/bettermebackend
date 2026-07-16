@@ -1778,7 +1778,7 @@ def analyze_photo(req: LogPhotoRequest) -> dict:
 
     try:
         response = client.messages.create(
-            model="claude-sonnet-5",
+            model="claude-3-5-sonnet-20241022",
             max_tokens=1000,
             temperature=0.2,
             system=(
@@ -1845,13 +1845,95 @@ def analyze_photo(req: LogPhotoRequest) -> dict:
         
     return {"status": "ok", "analysis": analysis_data}
 
+class FixAnalysisRequest(BaseModel):
+    user_id: str
+    image_base64: str
+    analysis: dict
+    correction: str
+    hand_width_cm: float | None = None
+
+@app.post("/nutrition/fix_analysis")
+def fix_analysis(req: FixAnalysisRequest) -> dict:
+    base64_data = req.image_base64
+    if "," in base64_data[:50]:
+        _, base64_data = base64_data.split(",", 1)
+
+    hand_hint = (
+        f" The user's hand is {req.hand_width_cm}cm wide across the palm if visible for scale."
+        if req.hand_width_cm else ""
+    )
+
+    try:
+        response = client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=1000,
+            temperature=0.2,
+            system=(
+                "You previously estimated calories and macros for this food photo. The user is "
+                "correcting your estimate. They ate the meal — trust their correction over your "
+                "visual read.\n\n"
+                "RULES:\n"
+                "1. Apply the correction fully: if a portion was bigger, scale that component's "
+                "quantity and all its macros proportionally; if an ingredient was misidentified, "
+                "use the correct food's nutrition values.\n"
+                "2. Leave components the user did not mention unchanged, unless the correction "
+                "logically affects them.\n"
+                "3. Calibration anchors: cooked rice 130 kcal/100g, cooked pasta 155 kcal/100g, "
+                "cooked chicken breast 165 kcal/100g, bread 265 kcal/100g, oil 900 kcal/100g."
+                f"{hand_hint}\n\n"
+                "Return ONLY a JSON object, no other text, with fields IN THIS ORDER:\n"
+                '- "reasoning": 1-2 sentences on how you applied the correction, written FIRST\n'
+                '- "name": short meal name\n'
+                '- "components": list, each with:\n'
+                '  - "name": component name including cooking method\n'
+                '  - "quantity": estimated amount (e.g. "300g cooked")\n'
+                '  - "cals": integer\n'
+                '  - "protein": grams, integer\n'
+                '  - "carbs": grams, integer\n'
+                '  - "fats": grams, integer'
+            ),
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": "image/jpeg",
+                                "data": base64_data
+                            }
+                        },
+                        {
+                            "type": "text",
+                            "text": (
+                                f"Your previous analysis:\n{json.dumps(req.analysis)}\n\n"
+                                f"The user's correction: \"{req.correction}\"\n\n"
+                                "Re-estimate the meal with this correction applied and return the JSON."
+                            )
+                        }
+                    ]
+                }
+            ]
+        )
+        text = next((b.text for b in response.content if b.type == "text"), "")
+        analysis_data = parse_llm_json(text)
+        if not analysis_data or "components" not in analysis_data:
+            raise HTTPException(status_code=502, detail="Could not parse corrected analysis")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"LLM error: {exc}")
+
+    return {"status": "ok", "analysis": analysis_data}
+
 @app.post("/nutrition/log_reviewed_meal")
 def log_reviewed_meal(req: LogReviewedMealRequest) -> dict:
     import uuid
     import json
     try:
         response = client.messages.create(
-            model="claude-sonnet-5",
+            model="claude-3-5-sonnet-20241022",
             max_tokens=300,
             system=(
                 "You are an expert nutritionist. Review the user's edited list of meal components. "
