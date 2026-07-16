@@ -1778,7 +1778,7 @@ def analyze_photo(req: LogPhotoRequest) -> dict:
 
     try:
         response = client.messages.create(
-            model="claude-3-5-sonnet-20241022",
+            model="claude-sonnet-5",
             max_tokens=1000,
             temperature=0.2,
             system=(
@@ -1865,7 +1865,7 @@ def fix_analysis(req: FixAnalysisRequest) -> dict:
 
     try:
         response = client.messages.create(
-            model="claude-3-5-sonnet-20241022",
+            model="claude-sonnet-5",
             max_tokens=1000,
             temperature=0.2,
             system=(
@@ -1933,7 +1933,7 @@ def log_reviewed_meal(req: LogReviewedMealRequest) -> dict:
     import json
     try:
         response = client.messages.create(
-            model="claude-3-5-sonnet-20241022",
+            model="claude-sonnet-5",
             max_tokens=300,
             system=(
                 "You are an expert nutritionist. Review the user's edited list of meal components. "
