@@ -1780,7 +1780,6 @@ def analyze_photo(req: LogPhotoRequest) -> dict:
         response = client.messages.create(
             model="claude-sonnet-5",
             max_tokens=1000,
-            temperature=0.2,
             system=(
                 "You estimate calories and macros from food photos. Accuracy of QUANTITY is your "
                 "primary job — identifying the food is easy, sizing it correctly is what matters.\n\n"
@@ -1867,7 +1866,6 @@ def fix_analysis(req: FixAnalysisRequest) -> dict:
         response = client.messages.create(
             model="claude-sonnet-5",
             max_tokens=1000,
-            temperature=0.2,
             system=(
                 "You previously estimated calories and macros for this food photo. The user is "
                 "correcting your estimate. They ate the meal — trust their correction over your "
